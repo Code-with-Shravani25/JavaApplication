@@ -72,4 +72,6 @@ module "ecs" {
   ecs_security_group_id = module.alb.ecs_security_group_id
 
   aws_region = var.aws_region
+
+  alb_listener_dependency = module.alb.alb_listener_arn
 }
