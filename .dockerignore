@@ -1,3 +1,10 @@
 .git
 .gitignore
 README.md
+target/
+.idea/
+*.iml
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
