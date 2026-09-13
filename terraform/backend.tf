@@ -1,6 +1,6 @@
 terraform {
   backend "s3" {
-    bucket = "ecs-devops-terraform-state-YOUR-UNIQUE-ID"
+    bucket = "shravani-ecs-terraform-state-20261309"
 
     key = "ecs-devops/terraform.tfstate"
 
