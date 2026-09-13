@@ -4,7 +4,7 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = "ecs-devops-terraform-state-YOUR-UNIQUE-ID"
+  bucket = "ecs-devops-terraform-state-20161309"
 }
 
 resource "aws_s3_bucket_versioning" "terraform_state" {
