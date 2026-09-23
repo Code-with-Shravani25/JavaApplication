@@ -14,14 +14,14 @@ pipeline {
             "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
         // Change these three values to match your Terraform resources
-        ECS_CLUSTER = 'javaapplication-cluster'
+        ECS_CLUSTER = 'ecs-devops-cluster'
 
-        ECS_SERVICE = 'javaapplication-service'
+        ECS_SERVICE = 'ecs-devops-service'
 
-        ECS_TASK_FAMILY = 'javaapplication-task'
+        ECS_TASK_FAMILY = 'ecs-devops-task'
 
         // Must match the container "name" in your ECS task definition
-        CONTAINER_NAME = 'javaapplication'
+        CONTAINER_NAME = 'ecs-devops'
     }
 
     stages {
