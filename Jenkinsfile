@@ -8,7 +8,7 @@ pipeline {
 
         AWS_ACCOUNT_ID = '570367131376'
 
-        ECR_REPOSITORY = 'javaapplication'
+        ECR_REPOSITORY = 'ecs-devops-repo'
 
         ECR_REGISTRY =
             "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
