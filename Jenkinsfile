@@ -1,3 +1,4 @@
+```groovy
 pipeline {
 
     agent any
@@ -13,11 +14,15 @@ pipeline {
         ECR_REGISTRY =
             "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
 
-        IMAGE_TAG =
-            "${env.GIT_COMMIT.substring(0, 7)}"
+        // Change these three values to match your Terraform resources
+        ECS_CLUSTER = 'javaapplication-cluster'
 
-        IMAGE_NAME =
-            "${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+        ECS_SERVICE = 'javaapplication-service'
+
+        ECS_TASK_FAMILY = 'javaapplication-task'
+
+        // Must match the container "name" in your ECS task definition
+        CONTAINER_NAME = 'javaapplication'
     }
 
     stages {
@@ -25,6 +30,20 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+
+                script {
+                    // Use first 7 characters of Git commit as Docker tag
+                    env.IMAGE_TAG = sh(
+                        script: 'git rev-parse --short=7 HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    env.IMAGE_NAME =
+                        "${env.ECR_REGISTRY}/${env.ECR_REPOSITORY}:${env.IMAGE_TAG}"
+
+                    echo "Git Commit: ${env.IMAGE_TAG}"
+                    echo "Docker Image: ${env.IMAGE_NAME}"
+                }
             }
         }
 
@@ -68,56 +87,149 @@ pipeline {
             }
         }
 
-        stage('Push Image') {
+        stage('Push Image to ECR') {
             steps {
                 sh '''
+                    echo "Pushing image: ${IMAGE_NAME}"
+
                     docker push ${IMAGE_NAME}
                 '''
             }
         }
 
-        stage('Terraform Init') {
+        stage('Prepare ECS Task Definition') {
             steps {
                 sh '''
-                    cd terraform
-                    terraform init
+                    echo "Getting current ECS task definition..."
+
+                    aws ecs describe-task-definition \
+                        --task-definition ${ECS_TASK_FAMILY} \
+                        --region ${AWS_REGION} \
+                        --query taskDefinition \
+                        --output json > taskdef.json
+
+                    echo "Updating container image..."
+
+                    jq --arg IMAGE "${IMAGE_NAME}" \
+                       --arg CONTAINER "${CONTAINER_NAME}" \
+                    '
+                    del(
+                        .taskDefinitionArn,
+                        .revision,
+                        .status,
+                        .requiresAttributes,
+                        .compatibilities,
+                        .registeredAt,
+                        .registeredBy
+                    )
+                    |
+                    .containerDefinitions |=
+                    map(
+                        if .name == $CONTAINER
+                        then .image = $IMAGE
+                        else .
+                        end
+                    )
+                    ' taskdef.json > taskdef-new.json
                 '''
             }
         }
 
-        stage('Terraform Plan') {
+        stage('Register ECS Task Definition') {
             steps {
                 sh '''
-                    cd terraform
+                    echo "Registering new ECS task definition..."
 
-                    terraform plan \
-                    -var="image_tag=${IMAGE_TAG}"
+                    aws ecs register-task-definition \
+                        --cli-input-json file://taskdef-new.json \
+                        --region ${AWS_REGION} \
+                        > new-task-definition.json
+
+                    cat new-task-definition.json
                 '''
             }
         }
 
-        stage('Terraform Apply') {
+        stage('Deploy to ECS') {
             steps {
                 sh '''
-                    cd terraform
+                    NEW_TASK_DEFINITION=$(jq -r \
+                        '.taskDefinition.taskDefinitionArn' \
+                        new-task-definition.json)
 
-                    terraform apply \
-                    -auto-approve \
-                    -var="image_tag=${IMAGE_TAG}"
+                    echo "Deploying:"
+                    echo "${NEW_TASK_DEFINITION}"
+
+                    aws ecs update-service \
+                        --cluster ${ECS_CLUSTER} \
+                        --service ${ECS_SERVICE} \
+                        --task-definition ${NEW_TASK_DEFINITION} \
+                        --region ${AWS_REGION}
                 '''
             }
         }
 
+        stage('Wait for ECS Deployment') {
+            steps {
+                sh '''
+                    echo "Waiting for ECS deployment..."
+
+                    aws ecs wait services-stable \
+                        --cluster ${ECS_CLUSTER} \
+                        --services ${ECS_SERVICE} \
+                        --region ${AWS_REGION}
+
+                    echo "ECS deployment is stable."
+                '''
+            }
+        }
+
+        stage('Deployment Verification') {
+            steps {
+                sh '''
+                    echo "Checking ECS service..."
+
+                    aws ecs describe-services \
+                        --cluster ${ECS_CLUSTER} \
+                        --services ${ECS_SERVICE} \
+                        --region ${AWS_REGION} \
+                        --query 'services[0].deployments'
+                '''
+            }
+        }
     }
 
     post {
 
         success {
-            echo 'Deployment successful!'
+            echo '''
+            ==========================================
+               DEPLOYMENT SUCCESSFUL
+            ==========================================
+            '''
+
+            echo "Docker Image: ${env.IMAGE_NAME}"
+            echo "ECS Cluster: ${env.ECS_CLUSTER}"
+            echo "ECS Service: ${env.ECS_SERVICE}"
         }
 
         failure {
-            echo 'Deployment failed!'
+            echo '''
+            ==========================================
+               DEPLOYMENT FAILED
+            ==========================================
+            '''
+
+            echo 'Check Jenkins console output for the failed stage.'
+        }
+
+        always {
+            sh '''
+                rm -f taskdef.json
+                rm -f taskdef-new.json
+                rm -f new-task-definition.json
+            '''
         }
     }
 }
+```
