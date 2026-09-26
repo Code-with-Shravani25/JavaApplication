@@ -14,9 +14,11 @@ crash.*.log
 # Keep Terraform lock file
 !.terraform.lock.hcl
 
-# Ignore everything inside Evidence by default
+# Ignore everything inside Evidence
 Evidence/*
 
+# Allow Evidence subdirectories
+!Evidence/*/
+
 # Allow only .txt files inside Evidence
-!Evidence/
 !Evidence/**/*.txt
