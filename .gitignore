@@ -1,8 +1,22 @@
-# Terraform
-.terraform/
+# Terraform generated files
+**/.terraform/
 *.tfstate
 *.tfstate.*
 *.tfplan
 tfplan
 crash.log
 crash.*.log
+
+# Terraform variable files containing secrets
+*.tfvars
+*.tfvars.json
+
+# Keep Terraform lock file
+!.terraform.lock.hcl
+
+# Ignore everything inside Evidence by default
+Evidence/*
+
+# Allow only .txt files inside Evidence
+!Evidence/
+!Evidence/**/*.txt
