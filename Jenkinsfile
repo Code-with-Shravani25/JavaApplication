@@ -149,24 +149,61 @@ pipeline {
             }
         }
 
-        stage('Deploy to ECS') {
-            steps {
-                sh '''
-                    NEW_TASK_DEFINITION=$(jq -r \
-                        '.taskDefinition.taskDefinitionArn' \
-                        new-task-definition.json)
+       stage('Deploy to ECS') {
+    steps {
+        sh '''
+            echo "Getting current ECS task definition..."
 
-                    echo "Deploying:"
-                    echo "${NEW_TASK_DEFINITION}"
+            aws ecs describe-task-definition \
+                --task-definition ecs-devops-task \
+                --region $AWS_REGION \
+                --query taskDefinition \
+                --output json > task-definition.json
 
-                    aws ecs update-service \
-                        --cluster ${ECS_CLUSTER} \
-                        --service ${ECS_SERVICE} \
-                        --task-definition ${NEW_TASK_DEFINITION} \
-                        --region ${AWS_REGION}
-                '''
-            }
-        }
+            echo "Creating new task definition with image: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+            jq --arg IMAGE "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
+                '.containerDefinitions[0].image = $IMAGE
+                | del(
+                    .taskDefinitionArn,
+                    .revision,
+                    .status,
+                    .requiresAttributes,
+                    .compatibilities,
+                    .registeredAt,
+                    .registeredBy
+                  )' \
+                task-definition.json > new-task-definition.json
+
+            echo "Registering new task definition..."
+
+            NEW_TASK_DEF=$(aws ecs register-task-definition \
+                --cli-input-json file://new-task-definition.json \
+                --region $AWS_REGION \
+                --query 'taskDefinition.taskDefinitionArn' \
+                --output text)
+
+            echo "New task definition: $NEW_TASK_DEF"
+
+            echo "Updating ECS service..."
+
+            aws ecs update-service \
+                --cluster ecs-devops-cluster \
+                --service ecs-devops-service \
+                --task-definition $NEW_TASK_DEF \
+                --region $AWS_REGION
+
+            echo "Waiting for ECS deployment..."
+
+            aws ecs wait services-stable \
+                --cluster ecs-devops-cluster \
+                --services ecs-devops-service \
+                --region $AWS_REGION
+
+            echo "ECS deployment completed successfully!"
+        '''
+    }
+}
 
         stage('Wait for ECS Deployment') {
             steps {
