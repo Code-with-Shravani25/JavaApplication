@@ -2,17 +2,19 @@
 
 ## 📌 Project Overview
 
-This project implements a production-style AWS infrastructure and CI/CD deployment pipeline using **Terraform, Jenkins, Docker, Amazon ECR, Amazon ECS Fargate, and AWS Application Load Balancer**.
+This project implements a production-style AWS infrastructure and CI/CD deployment pipeline using **Terraform, Jenkins, Docker, Amazon ECR, Amazon ECS Fargate, Application Load Balancer, IAM, S3, and CloudWatch**.
 
-The objective was to automate the complete application deployment process:
+The project automates the complete application deployment process:
 
-**GitHub → Jenkins → Maven → Docker → Amazon ECR → Amazon ECS Fargate → Application Load Balancer → Application**
+```text
+GitHub → Jenkins → Maven → Docker → Amazon ECR → ECS Fargate → ALB → Application
+```
 
-Infrastructure is provisioned using Terraform, while Jenkins automates the application build, container image creation, image push, ECS task definition registration, and deployment.
+Terraform is used to provision the AWS infrastructure, while Jenkins automates application build, containerization, image publishing, and ECS deployment.
 
 ---
 
-## 🏗️ Architecture
+# 🏗️ Architecture
 
 ```text
                          ┌──────────────────┐
@@ -28,13 +30,13 @@ Infrastructure is provisioned using Terraform, while Jenkins automates the appli
                          │      EC2         │
                          └────────┬─────────┘
                                   │
-                 ┌────────────────┼─────────────────┐
-                 │                │                 │
-                 ▼                ▼                 ▼
-              Maven            Docker          AWS CLI/JQ
-            Test/Package       Build              │
-                 │                │                 │
-                 └────────────────┼─────────────────┘
+                ┌─────────────────┼─────────────────┐
+                │                 │                 │
+                ▼                 ▼                 ▼
+             Maven             Docker          AWS CLI/JQ
+          Test / Package         Build              │
+                │                 │                 │
+                └─────────────────┼─────────────────┘
                                   │
                                   ▼
                          ┌──────────────────┐
@@ -64,111 +66,273 @@ Infrastructure is provisioned using Terraform, while Jenkins automates the appli
 
 # ☁️ AWS Infrastructure
 
-The infrastructure was created using Terraform.
+The AWS infrastructure is provisioned using Terraform.
 
-### AWS resources used
+### AWS Resources
 
-- VPC
-- Public Subnets
-- Private Subnets
-- Internet Gateway
-- NAT Gateway
-- Route Tables
-- Security Groups
-- Application Load Balancer
-- Target Group
-- Amazon ECR Repository
-- Amazon ECS Cluster
-- ECS Task Definition
-- ECS Service
-- ECS Fargate
-- IAM Roles
-- CloudWatch Log Group
-- S3 Terraform Backend
-- EBS Volume
+* VPC
+* Public Subnets
+* Private Subnets
+* Internet Gateway
+* NAT Gateway
+* Route Tables
+* Security Groups
+* Application Load Balancer
+* Target Group
+* Amazon ECR Repository
+* Amazon ECS Cluster
+* ECS Task Definition
+* ECS Service
+* ECS Fargate
+* IAM Roles
+* CloudWatch Log Group
+* S3 Terraform Backend
+* EBS Volume
+* Jenkins EC2 Instance
 
 ---
 
 # 🛠️ Tools & Technologies
 
-| Technology | Purpose |
-|---|---|
-| AWS | Cloud infrastructure |
-| Terraform | Infrastructure as Code |
-| Jenkins | CI/CD automation |
-| GitHub | Source code management |
-| GitHub Webhook | Automatic pipeline trigger |
-| Java | Application/runtime |
-| Maven | Build and test |
-| Docker | Containerization |
-| Amazon ECR | Docker image registry |
-| Amazon ECS Fargate | Container deployment |
-| Application Load Balancer | Application access/load balancing |
-| AWS CLI | AWS resource operations |
-| jq | JSON processing in pipeline |
-| Linux | Jenkins server/automation environment |
-| S3 | Terraform remote state |
+| Technology                | Purpose                       |
+| ------------------------- | ----------------------------- |
+| AWS                       | Cloud infrastructure          |
+| EC2                       | Jenkins server                |
+| EBS                       | Persistent Jenkins storage    |
+| Terraform                 | Infrastructure as Code        |
+| Jenkins                   | CI/CD automation              |
+| GitHub                    | Source code management        |
+| GitHub Webhook            | Automatic pipeline trigger    |
+| Java                      | Application                   |
+| Maven                     | Build and testing             |
+| Docker                    | Containerization              |
+| Amazon ECR                | Docker image registry         |
+| Amazon ECS Fargate        | Container deployment          |
+| Application Load Balancer | Application access            |
+| AWS CLI                   | AWS operations                |
+| jq                        | JSON processing               |
+| Linux                     | Jenkins server environment    |
+| S3                        | Terraform remote state        |
+| CloudWatch                | Application/container logging |
 
 ---
 
 # 🚀 Implementation Steps
 
-## 1. Terraform S3 Bootstrap
+## 1. Launch EC2 Instance
 
-Created Terraform configuration for the S3 backend used to store Terraform remote state.
+An EC2 instance is launched to act as the Jenkins and CI/CD execution server.
 
-The S3 backend provides centralized and persistent Terraform state storage.
+The instance is configured with the required security group and access for administration and application deployment.
 
----
+The EC2 instance is used to:
 
-## 2. Created AWS Infrastructure with Terraform
-
-Created Terraform code for the required AWS infrastructure, including:
-
-- VPC
-- Public and private subnets
-- NAT Gateway
-- Route tables
-- Security groups
-- Application Load Balancer
-- ECR
-- ECS cluster
-- ECS task definition
-- ECS service
-- IAM roles
-- CloudWatch
-- S3 backend
-
-Terraform was used to provision the infrastructure instead of creating resources manually through the AWS Console.
+* Run Jenkins
+* Execute Terraform
+* Build the Java application
+* Build Docker images
+* Authenticate with AWS
+* Push images to Amazon ECR
+* Deploy the application to ECS
 
 ---
 
-## 3. Jenkins EC2 Setup
+## 2. Install Required Tools on EC2
 
-Launched an EC2 instance to act as the Jenkins server.
+The required DevOps tools are installed on the Jenkins EC2 instance.
 
-Installed the required tools:
+### Tools Installed
 
 ```text
 Java
 Jenkins
 Git
+Maven
+Docker
 AWS CLI
 Terraform
-Docker
 jq
-Maven
 ```
 
-The EC2 instance acts as the CI/CD execution environment.
+Example verification:
+
+```bash
+java -version
+jenkins --version
+git --version
+mvn -version
+docker --version
+aws --version
+terraform --version
+jq --version
+```
+
+The EC2 instance therefore acts as the CI/CD execution environment.
 
 ---
 
-## 4. Git Repository Setup
+# 🔐 3. Configure AWS CLI
 
-The application source code and infrastructure/pipeline files were maintained in GitHub.
+AWS CLI is configured on the Jenkins EC2 instance to allow Jenkins and Terraform to interact with AWS.
 
-The Jenkins pipeline was configured using:
+```bash
+aws configure
+```
+
+The required AWS configuration includes:
+
+```text
+AWS Access Key ID
+AWS Secret Access Key
+Default region
+Output format
+```
+
+Example:
+
+```bash
+aws sts get-caller-identity
+```
+
+This command is used to verify that the EC2 environment can successfully authenticate with AWS.
+
+> For production environments, IAM roles, Jenkins credentials, AWS Secrets Manager, or other secure credential-management mechanisms should be preferred over storing long-lived access keys directly on the server.
+
+---
+
+# 🏗️ 4. Terraform Infrastructure Provisioning
+
+After configuring the EC2 environment and AWS authentication, Terraform is used to provision the AWS infrastructure.
+
+The Terraform configuration creates:
+
+* VPC
+* Public and private subnets
+* Internet Gateway
+* NAT Gateway
+* Route tables
+* Security groups
+* Application Load Balancer
+* Target Group
+* ECR repository
+* ECS cluster
+* ECS task definition
+* ECS service
+* IAM roles
+* CloudWatch Log Group
+* S3 backend
+
+### Initialize Terraform
+
+```bash
+cd JavaApplication/terraform
+terraform init
+```
+
+### Validate Configuration
+
+```bash
+terraform validate
+```
+
+### Create Terraform Plan
+
+```bash
+terraform plan
+```
+
+### Apply Infrastructure
+
+```bash
+terraform apply
+```
+
+Terraform provisions the required AWS infrastructure automatically.
+
+---
+
+# 🗄️ 5. Terraform Remote State with S3
+
+An S3 bucket is used as the Terraform remote backend.
+
+The backend provides centralized storage for Terraform state.
+
+Example:
+
+```text
+Terraform
+    ↓
+S3 Backend
+    ↓
+terraform.tfstate
+```
+
+This allows Terraform state to persist independently of the local EC2 environment.
+
+---
+
+# 💾 6. EBS Storage
+
+An EBS volume is created and attached to the Jenkins EC2 instance.
+
+The EBS volume provides persistent block storage for Jenkins-related data and server requirements.
+
+```text
+Jenkins EC2
+     │
+     └── EBS Volume
+```
+
+---
+
+# 📁 7. GitHub Repository Setup
+
+The application source code and DevOps configuration are maintained in GitHub.
+
+The repository contains:
+
+```text
+Java Application
+Dockerfile
+Jenkinsfile
+Terraform
+ECS Task Definition
+README
+```
+
+Suggested repository structure:
+
+```text
+JavaApplication/
+│
+├── terraform/
+│   ├── backend.tf
+│   ├── provider.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   ├── vpc/
+│   ├── alb/
+│   ├── ecr/
+│   ├── ecs/
+│   ├── iam/
+│   └── cloudwatch/
+│
+├── src/
+│
+├── Dockerfile
+├── pom.xml
+├── Jenkinsfile
+├── taskdef.json
+└── README.md
+```
+
+---
+
+# ⚙️ 8. Jenkins Configuration
+
+Jenkins is configured on the EC2 instance.
+
+The Jenkins pipeline is configured using:
 
 ```text
 Pipeline Definition:
@@ -178,55 +342,76 @@ SCM:
 Git
 
 Repository:
-GitHub repository
+GitHub Repository
 ```
 
----
-
-## 5. IAM Configuration
-
-Created an IAM user with the required permissions for provisioning and managing the AWS resources used by the project.
-
-AWS credentials were configured on the Jenkins EC2 environment so that AWS CLI commands used by the pipeline could authenticate with AWS.
-
-In addition, an IAM role containing the required **Amazon ECR/ECS permissions** was attached to the Jenkins EC2 instance.
-
-This allowed Jenkins to perform operations such as:
-
-- ECR authentication
-- ECR image operations
-- ECS task definition registration
-- ECS deployment operations
-
-The project therefore demonstrates both:
-
-- IAM user-based AWS authentication
-- EC2 IAM role-based permissions
+Jenkins retrieves the `Jenkinsfile` directly from the GitHub repository.
 
 ---
 
-## 6. EBS Storage
+# 🔑 9. IAM Configuration
 
-Created an EBS volume and attached it to the Jenkins EC2 instance.
+IAM permissions are configured for AWS operations performed by the project.
 
-The EBS storage was used for Jenkins-related storage requirements.
+### Infrastructure Provisioning
 
-This provides persistent block storage for the Jenkins server beyond the EC2 instance's local configuration.
+The AWS identity used by Terraform has permissions required to create and manage the infrastructure.
+
+### Jenkins AWS Operations
+
+An IAM role is attached to the Jenkins EC2 instance with permissions required for CI/CD operations such as:
+
+* ECR authentication
+* ECR image push
+* ECS task-definition registration
+* ECS service deployment
+* CloudWatch-related operations
+
+This allows Jenkins running on EC2 to interact with AWS resources.
 
 ---
 
-# 🔄 CI/CD Pipeline
+# 🔔 10. GitHub Webhook Setup
 
-The Jenkins pipeline automates the complete deployment process.
+GitHub is configured to automatically trigger the Jenkins pipeline whenever code is pushed to the repository.
 
-### Pipeline flow
+The flow is:
+
+```text
+Developer
+    │
+    │ git push
+    ▼
+ GitHub
+    │
+    │ Webhook
+    ▼
+ Jenkins
+    │
+    ▼
+ Pipeline Triggered
+```
+
+The Jenkins **Generic Webhook Trigger** plugin is configured to receive the GitHub webhook request.
+
+This removes the need to manually start the Jenkins pipeline after every code change.
+
+---
+
+# 🔄 11. CI/CD Pipeline
+
+The Jenkins pipeline automates the application deployment process.
+
+### Pipeline Flow
 
 ```text
 GitHub Push
      ↓
-Checkout SCM
+GitHub Webhook
      ↓
-Checkout
+Jenkins
+     ↓
+Checkout SCM
      ↓
 Maven Test
      ↓
@@ -248,22 +433,20 @@ Wait for ECS Deployment
      ↓
 Deployment Verification
      ↓
-Post Actions
+Application Available through ALB
 ```
 
 ---
 
-# 🧪 Pipeline Stages
+# 🧪 12. Jenkins Pipeline Stages
 
-### 1. Checkout SCM
+## Stage 1: Checkout SCM
 
 Jenkins checks out the latest source code from GitHub.
 
-### 2. Checkout
+---
 
-The application source code is prepared for the build process.
-
-### 3. Maven Test
+## Stage 2: Maven Test
 
 Maven executes the application's test cases.
 
@@ -271,25 +454,29 @@ Maven executes the application's test cases.
 mvn test
 ```
 
-### 4. Maven Package
+---
 
-The application is packaged using Maven.
+## Stage 3: Maven Package
+
+The Java application is packaged using Maven.
 
 ```bash
 mvn package
 ```
 
-### 5. Docker Build
+---
 
-A Docker image is created from the application.
+## Stage 4: Docker Build
 
-Example:
+A Docker image is created from the Java application.
 
 ```bash
 docker build -t <image-name> .
 ```
 
-### 6. ECR Login
+---
+
+## Stage 5: ECR Login
 
 Jenkins authenticates Docker with Amazon ECR.
 
@@ -298,7 +485,9 @@ aws ecr get-login-password --region <region> | \
 docker login --username AWS --password-stdin <ecr-repository>
 ```
 
-### 7. Push Image to ECR
+---
+
+## Stage 6: Push Image to ECR
 
 The Docker image is tagged and pushed to Amazon ECR.
 
@@ -306,63 +495,50 @@ The Docker image is tagged and pushed to Amazon ECR.
 docker push <ecr-image>
 ```
 
-### 8. Prepare ECS Task Definition
+---
 
-The pipeline prepares the ECS task definition using the newly created ECR image.
+## Stage 7: Prepare ECS Task Definition
 
-### 9. Register ECS Task Definition
+The pipeline updates the ECS task definition with the newly created ECR image.
 
-The updated task definition is registered with ECS.
+---
 
-### 10. Deploy to ECS
+## Stage 8: Register ECS Task Definition
+
+The updated task definition is registered with Amazon ECS.
+
+---
+
+## Stage 9: Deploy to ECS
 
 The ECS service is updated to use the new task definition.
 
-### 11. Wait for ECS Deployment
+---
 
-Jenkins waits for ECS to complete the deployment and reach a stable state.
+## Stage 10: Wait for ECS Deployment
 
-### 12. Deployment Verification
+Jenkins waits for the ECS service to reach a stable deployment state.
+
+---
+
+## Stage 11: Deployment Verification
 
 The pipeline verifies that the deployment completed successfully.
 
-### 13. Post Actions
+---
 
-Temporary task-definition files and other generated files are cleaned up.
+## Stage 12: Post Actions
+
+Temporary files and generated task-definition files are cleaned up after deployment.
 
 ---
 
-# 🔔 GitHub Webhook Integration
+# 📊 13. Successful Pipeline
 
-Configured the Jenkins **Generic Webhook Trigger** plugin.
-
-GitHub was configured to send a webhook whenever changes are pushed to the repository.
-
-```text
-Developer Push
-      ↓
-GitHub
-      ↓
-Webhook
-      ↓
-Jenkins
-      ↓
-Pipeline Triggered
-```
-
-This removes the need to manually start the Jenkins pipeline after every GitHub push.
-
----
-
-# 📊 Successful Pipeline
-
-The Jenkins pipeline successfully completed all stages.
-
-The successful execution included:
+A successful Jenkins execution completes all deployment stages:
 
 ```text
 ✓ Checkout SCM
-✓ Checkout
 ✓ Maven Test
 ✓ Maven Package
 ✓ Docker Build
@@ -376,10 +552,11 @@ The successful execution included:
 ✓ Post Actions
 ```
 
-Example successful deployment output:
+Example:
 
 ```text
 ==================== DEPLOYMENT SUCCESSFUL ====================
+
 Docker Image: <ECR image>
 ECS Cluster: ecs-devops-cluster
 ECS Service: ecs-devops-service
@@ -387,53 +564,85 @@ ECS Service: ecs-devops-service
 
 ---
 
-# 🔐 Security Considerations
+# 🌐 14. Application Deployment
 
-The project uses AWS IAM to control access to AWS resources.
+After ECS successfully deploys the container, the application is accessed through the Application Load Balancer.
 
-Key practices demonstrated:
+```text
+Internet
+   ↓
+Application Load Balancer
+   ↓
+ECS Fargate
+   ↓
+Docker Container
+   ↓
+Java Application
+```
 
-- IAM user for infrastructure provisioning
-- EC2 IAM role for Jenkins AWS operations
-- Separate permissions for ECR/ECS operations
-- Security groups controlling network access
-- Private subnets for application infrastructure
-- IAM roles for AWS services
-- No hard-coded AWS access keys inside the application code
-- Terraform remote state stored in S3
-
-> For a production environment, IAM policies should follow least-privilege principles and credentials should preferably be supplied through secure credential-management mechanisms rather than stored directly on the Jenkins host.
+The ALB provides the entry point for accessing the deployed application.
 
 ---
 
-# 📁 Suggested Repository Structure
+# 🔐 15. Security Considerations
+
+The project demonstrates AWS IAM and network-level security controls.
+
+Key practices include:
+
+* IAM-based access control
+* EC2 IAM role for Jenkins AWS operations
+* Security groups controlling network access
+* Private subnets for application infrastructure
+* IAM roles for AWS services
+* No AWS credentials inside application source code
+* Terraform state stored remotely in S3
+* Controlled access between ALB and ECS resources
+
+For production environments, IAM policies should follow the **principle of least privilege** and credentials should be managed using secure credential-management mechanisms.
+
+---
+
+# 📸 16. Project Evidence
+
+Since AWS resources may be destroyed after testing to control costs, deployment evidence is maintained in the GitHub repository.
+
+Recommended screenshots:
+
+1. EC2 instance
+2. Installed tools/version verification
+3. AWS CLI authentication
+4. Terraform plan
+5. Terraform apply
+6. VPC and subnet configuration
+7. ECR repository with Docker image
+8. ECS cluster
+9. ECS service
+10. Application Load Balancer
+11. Jenkins pipeline stages
+12. Successful Jenkins deployment
+13. GitHub webhook configuration
+14. Successful ECS task
+15. Application accessed through ALB
+
+Suggested evidence folder:
 
 ```text
-project/
-│
-├── terraform/
-│   ├── backend.tf
-│   ├── provider.tf
-│   ├── variables.tf
-│   ├── outputs.tf
-│   ├── vpc/
-│   ├── alb/
-│   ├── ecr/
-│   ├── ecs/
-│   ├── iam/
-│   └── cloudwatch/
-│
-├── src/
-│
-├── Dockerfile
-│
-├── pom.xml
-│
-├── Jenkinsfile
-│
-├── taskdef.json
-│
-└── README.md
+evidence/
+├── 01-ec2.png
+├── 02-tools-installed.png
+├── 03-aws-configure.png
+├── 04-terraform-plan.png
+├── 05-terraform-apply.png
+├── 06-vpc.png
+├── 07-ecr.png
+├── 08-ecs-cluster.png
+├── 09-ecs-service.png
+├── 10-alb.png
+├── 11-jenkins-pipeline.png
+├── 12-deployment-success.png
+├── 13-github-webhook.png
+└── 14-application.png
 ```
 
 ---
@@ -442,31 +651,30 @@ project/
 
 This project demonstrates hands-on experience with:
 
-- Infrastructure as Code
-- Terraform modules
-- Terraform remote state
-- AWS networking
-- VPC architecture
-- Public/private subnet design
-- NAT Gateway
-- IAM
-- EC2
-- EBS
-- Docker
-- Container image management
-- Amazon ECR
-- Amazon ECS Fargate
-- Application Load Balancer
-- CloudWatch
-- Maven
-- Jenkins
-- Jenkins Pipeline
-- GitHub SCM
-- GitHub Webhooks
-- CI/CD automation
-- Automated ECS deployments
-- AWS CLI
-- Linux administration
+* Infrastructure as Code
+* Terraform
+* Terraform modules
+* Terraform remote state
+* AWS networking
+* VPC architecture
+* Public/private subnet design
+* NAT Gateway
+* IAM
+* EC2
+* EBS
+* Docker
+* Amazon ECR
+* Amazon ECS Fargate
+* Application Load Balancer
+* CloudWatch
+* Maven
+* Jenkins
+* Jenkins Pipeline
+* GitHub SCM
+* GitHub Webhooks
+* CI/CD automation
+* AWS CLI
+* Linux administration
 
 ---
 
@@ -474,7 +682,7 @@ This project demonstrates hands-on experience with:
 
 ### Infrastructure Automation
 
-AWS infrastructure is provisioned using Terraform rather than manually creating resources.
+AWS infrastructure is provisioned using Terraform instead of manually creating resources through the AWS Console.
 
 ### Automated CI/CD
 
@@ -482,17 +690,17 @@ A GitHub push automatically triggers Jenkins through a webhook.
 
 ### Containerized Deployment
 
-The Java application is packaged into a Docker image and stored in Amazon ECR.
+The Java application is packaged into a Docker image and published to Amazon ECR.
 
-### Serverless Container Deployment
+### Fargate Deployment
 
-The application is deployed using ECS Fargate without managing ECS worker EC2 instances.
+The application is deployed using Amazon ECS Fargate without managing ECS worker EC2 instances.
 
 ### Production-Style Networking
 
 The architecture uses VPC, public/private subnets, NAT Gateway, security groups, and an Application Load Balancer.
 
-### Infrastructure + Application Deployment
+### End-to-End Automation
 
 The project combines:
 
@@ -516,58 +724,39 @@ Designed and implemented an end-to-end AWS deployment platform using **Terraform
 
 ---
 
-# 📸 Project Evidence
-
-Recommended screenshots to include in the repository:
-
-1. Terraform plan
-2. Terraform apply
-3. AWS VPC/subnet architecture
-4. ECR repository with pushed image
-5. ECS cluster
-6. ECS service
-7. ALB
-8. Jenkins pipeline stages
-9. Successful Jenkins deployment
-10. GitHub webhook configuration
-11. Successful ECS task
-12. Application accessed through ALB
-
----
-
 # 🏁 Final Result
 
-The complete deployment process is automated:
+The complete deployment workflow is automated:
 
 ```text
 Developer
-   │
-   │ git push
-   ▼
-GitHub
-   │
-   │ webhook
-   ▼
-Jenkins
-   │
-   ├── Maven Test
-   ├── Maven Package
-   ├── Docker Build
-   ├── ECR Login
-   └── Push Image
-          │
-          ▼
+    │
+    │ git push
+    ▼
+ GitHub
+    │
+    │ Webhook
+    ▼
+ Jenkins EC2
+    │
+    ├── Maven Test
+    ├── Maven Package
+    ├── Docker Build
+    ├── ECR Login
+    └── Push Image
+           │
+           ▼
        Amazon ECR
-          │
-          ▼
-      Amazon ECS
-        Fargate
-          │
-          ▼
+           │
+           ▼
+       Amazon ECS
+         Fargate
+           │
+           ▼
  Application Load Balancer
-          │
-          ▼
-      Application
+           │
+           ▼
+       Application
 ```
 
 **Status: ✅ End-to-End CI/CD Pipeline Successfully Implemented**
