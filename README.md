@@ -225,7 +225,7 @@ The Terraform configuration creates:
 ### Initialize Terraform
 
 ```bash
-cd JavaApplication/terraform
+cd aws-ecs-fargate-cicd/terraform
 terraform init
 ```
 
