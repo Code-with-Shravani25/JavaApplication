@@ -90,6 +90,9 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+/*
+Elastic IP provides a static public IP address to the NAT Gateway, while the NAT Gateway allows resources in private subnets to access the internet without giving those resources public IP addresses.
+*/
 
 # =========================
 # Elastic IP for NAT Gateway
