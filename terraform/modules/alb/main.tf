@@ -36,7 +36,7 @@ resource "aws_security_group" "ecs" {
     from_port       = 8080
     to_port         = 8080
     protocol        = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    security_groups = [aws_security_group.alb.id] # Allow traffic on port 8080 only if it comes from the ALB's Security Group.
   }
 
   egress {
