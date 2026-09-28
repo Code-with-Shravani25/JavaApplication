@@ -99,10 +99,10 @@ Elastic IP provides a static public IP address to the NAT Gateway, while the NAT
 # =========================
 
 resource "aws_eip" "nat" {
-  domain = "vpc"
+  domain = "vpc" # Create this Elastic IP for use with resources inside a VPC.
 
   tags = {
-    Name = "${var.project_name}-nat-eip"
+    Name = "${var.project_name}-nat-eip" 
   }
 }
 
