@@ -112,15 +112,22 @@ resource "aws_eip" "nat" {
 # =========================
 
 resource "aws_nat_gateway" "this" {
-  allocation_id = aws_eip.nat.id
+  allocation_id = aws_eip.nat.id # allocation_id tells the NAT Gateway which Elastic IP should be attached to it.
 
-  # NAT Gateway MUST be in a PUBLIC subnet
+  # NAT Gateway MUST be in a PUBLIC subnet, 
   subnet_id = aws_subnet.public[0].id
-
+/*
+one NAT Gateway is enough to serve multiple private subnets. The NAT Gateway itself does not need to be created in every subnet.
+The NAT Gateway is sitting in the public subnet, and it sends the traffic through the Internet Gateway.
+*/
   depends_on = [
     aws_internet_gateway.this
   ]
-
+/*
+Why not put NAT Gateway in a private subnet?
+Because the NAT Gateway itself needs a path to the internet. So it must be publics subnet
+Your NAT Gateway is in a public subnet, and for that subnet to actually have internet connectivity, the VPC needs its Internet Gateway.
+*/
   tags = {
     Name = "${var.project_name}-nat"
   }
