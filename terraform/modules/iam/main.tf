@@ -23,3 +23,11 @@ resource "aws_iam_role_policy_attachment" "ecs_execution" {
 
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
+
+/*
+This AWS-managed policy allows ECS to perform actions such as:
+
+Pull your Docker image from ECR
+Send container logs to CloudWatch Logs
+Retrieve certain secrets/configuration used by the task, when configured through supported ECS integrations
+*/
