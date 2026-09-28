@@ -16,7 +16,7 @@ resource "aws_security_group" "alb" {
     description = "Allow all outbound traffic"
     from_port   = 0
     to_port     = 0
-    protocol    = "-1"
+    protocol    = "-1" # all network traffic protocols allowed
     cidr_blocks = ["0.0.0.0/0"]
   }
 
